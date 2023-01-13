@@ -6,6 +6,8 @@
 
 #include <gb/gb.h>
 #include <stdio.h>
+#include <stdbool.h>
+#include<stdint.h>
 
 #include "GBDK_Constants.h"
 #include "MetaSprites.c"
@@ -13,6 +15,18 @@
 #include "Background.c"
 
 void main(){
+    //user input
+    uint8_t joypadData;
+
+    // check if A button is single pressed
+    bool aButtonJustPressed = false;
+    bool aButtonStillPressed = false;
+
+    // these registers must be in this specific order!
+    NR52_REG = 0x80; // is 1000 0000 in binary and turns on sound
+    NR50_REG = 0x77; // sets the volume for both left and right channel just set to max 0x77
+    NR51_REG = 0xFF; // is 1111 1111 in binary, select which channels we want
+
     // keep track of meta sprite position, in a variable
     const int FIXED_Y_POSITION_OF_SHIP = 144;
     int shipXPosition = 76;
@@ -41,8 +55,10 @@ void main(){
     // game loop
     while (1) {
         // get D-pad input
-       switch (joypad()) {
-        case J_LEFT:
+       joypadData = joypad();
+
+        // If LEFT D-pad is pressed
+        if (joypadData & J_LEFT) {
             // move sprite in the index 0 by (x,y) (-1,0)
             scroll_meta_sprite(0, -1, 0);
             shipXPosition -= 1;
@@ -50,8 +66,10 @@ void main(){
                 shipXPosition = 8;
                 move_meta_sprite(0, 8, FIXED_Y_POSITION_OF_SHIP);
             }
-            break;
-        case J_RIGHT:
+        }
+
+        // If RIGHT D-pad is pressed
+        if (joypadData & J_RIGHT) {
             // move sprite in the index 0 by (x,y) (+1, 0)
             scroll_meta_sprite(0, 1, 0);
             shipXPosition += 1;
@@ -59,10 +77,28 @@ void main(){
                 shipXPosition = SCREEN_WIDTH - 8;
                 move_meta_sprite(0, (uint8_t)(SCREEN_WIDTH - 8), FIXED_Y_POSITION_OF_SHIP);
             }
-            break;
-        default:
-            break;
         }
+
+        // If A button is pressed
+        if (joypadData & J_A) {
+            if (aButtonJustPressed == true) {
+                aButtonStillPressed = true;
+            }
+            else {
+                aButtonJustPressed = true;
+                // play a sound
+                NR10_REG = 0x16;
+                NR11_REG = 0x82;
+                NR12_REG = 0x69;
+                NR13_REG = 0x59;
+                NR14_REG = 0xC6;
+            }
+        }
+        else {
+            aButtonJustPressed = false;
+            aButtonStillPressed = false;
+        }
+
         // scroll background 0 in x and 1 in the Y
         scroll_bkg(0, -1);
 
